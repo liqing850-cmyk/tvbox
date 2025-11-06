@@ -23,11 +23,10 @@ jobs:
             -e username=${{ github.repository_owner }} \
             -e token=${{ secrets.GITHUB_TOKEN }} \
             -e repo=tvbox \
-            -e url='https://ghproxy.net/https://raw.githubusercontent.com/ZTHA000/tvbox/main/gyckname.json,https://gitee.com/guot54/YGBH777/raw/main/ygbox.json,http://cdn.qiaoji8.com/tvbox.json,https://raw.liucn.cc/box/m.json' \
+            -e url='https://raw.githubusercontent.com/felixiao/TVBoxSource/main/%E8%87%AA%E7%94%A8%E5%A4%9A%E4%BB%93.json,https://raw.githubusercontent.com/UndCover/PyramidStore/main/py.json,https://gitee.com/guot54/YGBH777/raw/main/ygbox.json,http://pandown.pro/tvbox/tvbox.json' \
             -e mirror=1 \
             -e num=1 \
             -e target=tvbox \
-            -e timeout=10 \
             2011820123/tvbox:latest
 
       - name: Checkout Repo for Verification
