@@ -23,7 +23,7 @@ jobs:
             -e username=${{ github.repository_owner }} \
             -e token=${{ secrets.GITHUB_TOKEN }} \
             -e repo=tvbox \
-            -e url='https://raw.githubusercontent.com/felixiao/TVBoxSource/main/%E8%87%AA%E7%94%A8%E5%A4%9A%E4%BB%93.json,https://raw.githubusercontent.com/UndCover/PyramidStore/main/py.json,https://gitee.com/guot54/YGBH777/raw/main/ygbox.json,http://pandown.pro/tvbox/tvbox.json' \
+            -e url='https://raw.githubusercontent.com/3DNest/TVBox/main/tvbox.json,https://raw.githubusercontent.com/yydfys/yydf/main/yydf/yydf.json,https://raw.githubusercontent.com/feng8695/TVBox/main/tvbox.json,https://raw.githubusercontent.com/UndCover/PyramidStore/main/py.json' \
             -e mirror=1 \
             -e num=1 \
             -e target=tvbox \
