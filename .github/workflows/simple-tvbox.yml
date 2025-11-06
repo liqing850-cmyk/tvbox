@@ -1,27 +1,34 @@
 name: Simple TVBox Update
+
 on:
   schedule:
-    - cron: '0 19 * * *' # 每天北京时间凌晨 3 点自动更新 (UTC 19:00)
-  workflow_dispatch: # 允许手动触发
+    - cron: '0 19 * * *'   # UTC 19:00 → 北京时间 03:00
+  workflow_dispatch:
+
 concurrency:
   group: tvbox-update
   cancel-in-progress: true
+
 jobs:
   update:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # 确保 GITHUB_TOKEN 有写权限
-      issues: write # 允许创建 Issue 通知失败
+      contents: write
+      issues: write
+
     steps:
-      - name: Setup Git Auth in Container
+      # 1. 拉取仓库代码（后面会挂载进去）
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # 2. 运行 TVBox 容器（内部已自带 run.py）
+      - name: Run TVBox Docker
         run: |
-          # 创建一个 wrapper 脚本，强制设置 git remote 带 token
-          cat > /tmp/docker-entry.sh << 'EOF'
-          #!/bin/bash
-          set -e
-          export GIT_REMOTE="https://${{ github.repository_owner }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository_owner }}/${{ env.repo }}.git"
-          # 在容器内运行原命令，但替换 push 部分
+          echo "开始运行容器..."
           docker run --rm \
+            -v ${{ github.workspace }}:/data \
             -e username=${{ github.repository_owner }} \
             -e token=${{ secrets.GITHUB_TOKEN }} \
             -e repo=tvbox \
@@ -29,15 +36,39 @@ jobs:
             -e mirror=1 \
             -e num=1 \
             -e target=tvbox \
-            -v /tmp/git-config:/tmp/git-config \
-            2011820123/tvbox:latest /bin/sh -c "
-              # 克隆后立即设置 remote
-              git remote set-url origin \$GIT_REMOTE
-              # 然后执行原逻辑（假设原脚本是 entrypoint）
-              exec /原脚本路径
-            "
-          EOF
-          chmod +x /tmp/docker-entry.sh
-      - name: Run TVBox Docker (Internal Clone & Push)
-        run: /tmp/docker-entry.sh  # 用 wrapper 运行
-      # ... 其余步骤不变
+            2011820123/tvbox:latest \
+            python /run.py   # 直接调用容器内部脚本
+
+      # 3. 验证生成的文件
+      - name: Verify Update
+        if: always()
+        run: |
+          echo "## 更新验证结果" >> $GITHUB_STEP_SUMMARY
+          if [ -f "tvbox.json" ]; then
+            echo "### tvbox.json 已生成，大小: $(wc -c < tvbox.json) 字节" >> $GITHUB_STEP_SUMMARY
+            echo "#### 最后 5 行预览:" >> $GITHUB_STEP_SUMMARY
+            tail -5 tvbox.json >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### tvbox.json 未找到" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ -f "all.json" ]; then
+            echo "### all.json 已生成，大小: $(wc -c < all.json) 字节" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### all.json 未找到" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "容器运行结束，请刷新仓库查看文件。" >> $GITHUB_STEP_SUMMARY
+        continue-on-error: true
+
+      # 4. 失败时自动创建 Issue
+      - name: Notify on Failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: 'TVBox 更新失败',
+              body: `工作流 "${{ github.workflow }}" 在 ${{ github.run_id }} 运行失败。\n日志：${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`
+            })
