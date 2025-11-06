@@ -23,7 +23,7 @@ jobs:
             -e username=${{ github.repository_owner }} \
             -e token=${{ secrets.GITHUB_TOKEN }} \
             -e repo=tvbox \
-            -e url='http://pandown.pro/tvbox/tvbox.json,http://9xi4o.tk/0725.json,https://cyao2q.github.io/files/n.json' \
+            -e url='https://raw.githubusercontent.com/Coldmoon111/TVBox/main/tvbox.json,https://raw.githubusercontent.com/2P7Z/TVBox/main/tvbox.json,http://www.11111.moe/tvbox.json,https://raw.githubusercontent.com/hyb1996/ReleaseTV/main/public/tv.json' \
             -e mirror=1 \
             -e num=1 \
             -e target=tvbox \
