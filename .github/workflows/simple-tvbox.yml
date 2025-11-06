@@ -2,26 +2,69 @@ name: Simple TVBox Update
 
 on:
   schedule:
-    - cron: '0 3 * * *'   # 每天凌晨 3 点自动更新（北京时间）
-  workflow_dispatch:      # 允许手动触发
+    - cron: '0 19 * * *' # 每天北京时间凌晨 3 点自动更新 (UTC 19:00)
+  workflow_dispatch: # 允许手动触发
+
+concurrency:
+  group: tvbox-update
+  cancel-in-progress: true
 
 jobs:
   update:
     runs-on: ubuntu-latest
-
+    permissions:
+      contents: write # 确保 GITHUB_TOKEN 有写权限
     steps:
       - name: Run TVBox Docker (Internal Clone & Push)
         run: |
           echo "开始运行容器..."
           docker run --rm \
-            -e username=${{ secrets.USERNAME }} \
-            -e token=${{ secrets.TOKEN }} \
+            -e username=${{ github.repository_owner }} \
+            -e token=${{ secrets.GITHUB_TOKEN }} \
             -e repo=tvbox \
             -e url='http://www.饭太硬.com/tv/?&signame=饭太硬' \
             -e mirror=1 \
-            -e num=0 \
+            -e num=1 \
+            -e target=tvbox \
             2011820123/tvbox:latest
 
-      - name: Verify Completion
+      - name: Checkout Repo for Verification
+        if: always()
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: main # 假设默认分支是 main，根据实际情况调整
+
+      - name: Verify Update
+        if: always()
         run: |
-          echo "容器运行完成！刷新仓库页面查看文件。"
+          echo "## 更新验证结果" >> $GITHUB_STEP_SUMMARY
+          if [ -f "tvbox.json" ]; then
+            echo "### tvbox.json 文件存在，大小: $(wc -c < tvbox.json) 字节" >> $GITHUB_STEP_SUMMARY
+            echo "#### 最近 5 行内容:" >> $GITHUB_STEP_SUMMARY
+            tail -5 tvbox.json >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ⚠️ tvbox.json 文件未找到" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ -f "all.json" ]; then
+            echo "### all.json 文件存在，大小: $(wc -c < all.json) 字节" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ⚠️ all.json 文件未找到" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "### 最近提交:" >> $GITHUB_STEP_SUMMARY
+          git log --oneline -5 || echo "无最近提交记录" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "容器运行完成！请刷新仓库页面查看文件更新。" >> $GITHUB_STEP_SUMMARY
+        continue-on-error: true
+
+      - name: Notify on Failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: 'TVBox 更新失败',
+              body: `工作流 "${{ github.workflow }}" 在 ${{ github.run_id }} 运行失败。请检查日志: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`
+            })
