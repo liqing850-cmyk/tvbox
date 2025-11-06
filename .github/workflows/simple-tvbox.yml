@@ -2,7 +2,7 @@ name: Simple TVBox Update
 
 on:
   schedule:
-    - cron: '0 19 * * *'   # UTC 19:00 → 北京时间 03:00
+    - cron: '0 19 * * *'   # 北京时间 03:00
   workflow_dispatch:
 
 concurrency:
@@ -17,13 +17,11 @@ jobs:
       issues: write
 
     steps:
-      # 1. 拉取仓库代码（后面会挂载进去）
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      # 2. 运行 TVBox 容器（内部已自带 run.py）
       - name: Run TVBox Docker
         run: |
           echo "开始运行容器..."
@@ -37,9 +35,21 @@ jobs:
             -e num=1 \
             -e target=tvbox \
             2011820123/tvbox:latest \
-            python /run.py   # 直接调用容器内部脚本
+            python /run.py
 
-      # 3. 验证生成的文件
+      - name: Commit & Push if files changed
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add tvbox.json all.json 2>/dev/null || echo "No files to add"
+          if git diff --staged --quiet; then
+            echo "No changes detected."
+          else
+            git commit -m "Auto update TVBox config $(date +'%Y-%m-%d %H:%M:%S')"
+            git push origin main
+            echo "Files updated and pushed!"
+          fi
+
       - name: Verify Update
         if: always()
         run: |
@@ -57,10 +67,9 @@ jobs:
             echo "### all.json 未找到" >> $GITHUB_STEP_SUMMARY
           fi
           echo "---" >> $GITHUB_STEP_SUMMARY
-          echo "容器运行结束，请刷新仓库查看文件。" >> $GITHUB_STEP_SUMMARY
+          echo "容器运行结束，文件已自动提交。" >> $GITHUB_STEP_SUMMARY
         continue-on-error: true
 
-      # 4. 失败时自动创建 Issue
       - name: Notify on Failure
         if: failure()
         uses: actions/github-script@v7
@@ -70,5 +79,5 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               title: 'TVBox 更新失败',
-              body: `工作流 "${{ github.workflow }}" 在 ${{ github.run_id }} 运行失败。\n日志：${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`
+              body: `工作流在 ${{ github.run_id }} 失败。\n日志：${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`
             })
