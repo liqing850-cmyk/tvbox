@@ -1,0 +1,27 @@
+name: Simple TVBox Update
+
+on:
+  schedule:
+    - cron: '0 3 * * *'   # 每天凌晨 3 点自动更新（北京时间）
+  workflow_dispatch:      # 允许手动触发
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Run TVBox Docker (Internal Clone & Push)
+        run: |
+          echo "开始运行容器..."
+          docker run --rm \
+            -e username=${{ secrets.USERNAME }} \
+            -e token=${{ secrets.TOKEN }} \
+            -e repo=tvbox \
+            -e url='http://www.饭太硬.com/tv/?&signame=饭太硬' \
+            -e mirror=1 \
+            -e num=0 \
+            2011820123/tvbox:latest
+
+      - name: Verify Completion
+        run: |
+          echo "容器运行完成！刷新仓库页面查看文件。"
