@@ -22,7 +22,7 @@ jobs:
             -e username=${{ github.repository_owner }} \
             -e token=${{ secrets.GITHUB_TOKEN }} \
             -e repo=tvbox \
-            -e url='http://www.饭太硬.com/tv/?&signame=饭太硬' \
+            -e url='http://www.饭太硬.com/tv/?&signame=饭太硬,https://ghps.cc/https://raw.githubusercontent.com/xmbjm/vip4K/main/4Kvip.json,https://jihulab.com/z-blog/xh2/-/raw/main/t3.json,https://agit.ai/ddx/TVBox/raw/branch/master/d.json,https://raw.gitmirror.com/yydfys/yydf/main/yydf/yydf.json' \
             -e mirror=1 \
             -e num=1 \
             -e target=tvbox \
